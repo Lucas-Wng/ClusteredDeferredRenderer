@@ -7,7 +7,6 @@
 #include "ModelLoader.h"
 #include <iostream>
 #include <filesystem>
-#include <cassert>
 #include <unordered_map>
 
 #include <glm/glm.hpp>
@@ -65,7 +64,8 @@ void ModelLoader::processNode(cgltf_node* node, const glm::mat4& parentTransform
                               std::vector<Mesh>& meshes, const cgltf_data* data) {
     static std::unordered_map<std::string, GLuint> textureCache;  // Caches texture loads
 
-    glm::mat4 transform = parentTransform * getNodeTransform(node);
+    glm::mat4 localTransform = getNodeTransform(node);
+    glm::mat4 transform = parentTransform * localTransform;
 
     if (node->mesh) {
         for (cgltf_size p = 0; p < node->mesh->primitives_count; ++p) {
@@ -185,7 +185,7 @@ void ModelLoader::processNode(cgltf_node* node, const glm::mat4& parentTransform
             meshes.push_back(Mesh{
                     vao, vbo, ebo,
                     static_cast<GLsizei>(indices.size()),
-                    transform,
+                    localTransform,
                     diffuseTex, specGlossTex, normalTex, occlusionTex, emissiveTex
             });
         }
