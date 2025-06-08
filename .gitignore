@@ -1,0 +1,32 @@
+# Build and CMake
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# CLion/JetBrains
+.idea/
+*.iml
+
+# MacOS system files
+.DS_Store
+
+# Logs and temporary
+*.log
+*.tmp
+*.swp
+
+# Binaries
+*.out
+*.exe
+*.app
+*.o
+*.a
+*.so
+*.dylib
+
+# Backup and editor files
+*~
+*.orig
