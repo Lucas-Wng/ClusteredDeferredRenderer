@@ -15,8 +15,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 
-using namespace std;
-
 GLuint ModelLoader::loadTextureFromFile(const std::string& path) {
     int width, height, channels;
     unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);

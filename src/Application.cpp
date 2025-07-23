@@ -18,8 +18,8 @@ void Application::run() {
     initCallbacks();
 
     scene = new Scene();
-    scene->loadModel("assets/models/city/scene.gltf");
-    renderer = new DeferredRenderer(SCR_WIDTH, SCR_HEIGHT);
+    scene->loadModel("assets/models/porche/scene.gltf");
+    renderer = new DeferredRenderer(SCR_WIDTH, SCR_HEIGHT, camera);
     cameraController = new CameraController(camera);
 
     while (!glfwWindowShouldClose(window)) {
@@ -30,9 +30,11 @@ void Application::run() {
         processInput();
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        float currentTime = glfwGetTime();
+        scene->updateLights(currentTime);
 
         renderer->geometryPass(*scene, camera);
-        renderer->lightingPass(camera);
+        renderer->lightingPass(*scene, camera);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
