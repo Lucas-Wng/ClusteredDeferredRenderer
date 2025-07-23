@@ -1,6 +1,6 @@
 # Clustered Deferred Renderer
 
-A modern OpenGL clustered deferred renderer. This project renders scenes with many dynamic lights by assigning lights to 3D clusters entirely in the fragment shader.
+A modern C++ OpenGL clustered deferred renderer. This project renders scenes with many dynamic lights by assigning lights to 3D clusters entirely in the fragment shader.
 
 ## ✨ Features
 
