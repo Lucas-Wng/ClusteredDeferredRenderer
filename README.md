@@ -84,7 +84,7 @@ ClusteredDeferredRenderer/
 ### Build (macOS/Linux/Windows)
 
 ```bash
-git clone https://github.com/yourusername/ClusteredDeferredRenderer.git
+git clone https://github.com/Lucas-Wng/ClusteredDeferredRenderer.git
 cd ClusteredDeferredRenderer
 mkdir build && cd build
 cmake ..
