@@ -23,6 +23,11 @@ public:
     void geometryPass(const Scene& scene, const Camera& camera);
     void lightingPass(const Scene& scene, const Camera& camera);
 
+    int getWidth();
+    int getHeight();
+
+    void setScreenSize(int width, int height, const Camera& camera);
+
 private:
     void initGBuffer();
 

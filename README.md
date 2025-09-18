@@ -16,8 +16,8 @@ A modern C++ OpenGL clustered deferred renderer. This project renders scenes wit
 ## 📸 Screenshots
 
 ![car](assets/images/car.gif)
-![warehouse](assets/images/warehouse.png)
-![city](assets/images/city.png)
+
+![backpack](assets/images/backpack.gif)
 
 ## 🧠 How It Works
 

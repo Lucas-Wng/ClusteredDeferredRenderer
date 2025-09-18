@@ -18,7 +18,7 @@ void Application::run() {
     initCallbacks();
 
     scene = new Scene();
-    scene->loadModel("assets/models/porche/scene.gltf");
+    scene->loadModel("assets/models/survival_guitar_backpack/scene.gltf");
     renderer = new DeferredRenderer(SCR_WIDTH, SCR_HEIGHT, camera);
     cameraController = new CameraController(camera);
 
@@ -28,8 +28,19 @@ void Application::run() {
         lastFrame = currentFrame;
 
         processInput();
+
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+
+        glViewport(0, 0, width, height);
+
+        if (width != renderer->getWidth() || height != renderer->getHeight()) {
+            renderer->setScreenSize(width, height, camera);
+        }
+
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         float currentTime = glfwGetTime();
         scene->updateLights(currentTime);
 
@@ -67,6 +78,7 @@ void Application::initGL() {
         exit(-1);
     }
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_FRAMEBUFFER_SRGB); // Enable sRGB framebuffer
 }
 
 void Application::initCallbacks() {

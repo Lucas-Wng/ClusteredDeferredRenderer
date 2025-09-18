@@ -1,46 +1,45 @@
-
-
-
 #version 330 core
 
 layout (location = 0) out vec3 gPosition;
 layout (location = 1) out vec3 gNormal;
 layout (location = 2) out vec4 gAlbedoSpec;
 
-in vec3 Normal;
-in vec3 FragPos;
-in vec2 TexCoord;
+in VS_OUT {
+    vec3 FragPos;   // world-space position
+    vec2 TexCoord;
+    mat3 TBN;       // tangent-bitangent-normal
+} fs_in;
 
-uniform vec3 lightPos;
-uniform vec3 viewPos;
-uniform vec3 lightColor;
+uniform mat4 view;
 
 uniform sampler2D diffuseTexture;
-uniform float specularStrength = 0.5;
 uniform sampler2D specularGlossinessTexture;
 uniform sampler2D normalTexture;
-uniform sampler2D occlusionTexture;
-uniform sampler2D emissiveTexture;
+uniform sampler2D occlusionTexture; // unused in G-buffer (optional)
+uniform sampler2D emissiveTexture;  // unused in G-buffer (optional)
 
+uniform float specularStrength = 0.5;
 
-void main() {
-    // Sample from diffuse texture
-    vec3 albedo = texture(diffuseTexture, TexCoord).rgb;
+void main()
+{
+    // Position in view space
+    vec3 viewPos = vec3(view * vec4(fs_in.FragPos, 1.0));
+    gPosition = viewPos;
 
-    // Sample specular glossiness map's red channel as a rough approximation (fallback to specularStrength if unavailable)
-    float specGloss = texture(specularGlossinessTexture, TexCoord).r;
-    float specular = mix(specularStrength, specGloss, step(0.01, specGloss)); // use specGloss if it's non-zero
+    // Normal mapping (tangent → view space)
+    vec3 texNormal = texture(normalTexture, fs_in.TexCoord).rgb;
+    texNormal = normalize(texNormal * 2.0 - 1.0);   // [0,1] → [-1,1]
+    vec3 worldNormal = normalize(fs_in.TBN * texNormal);
+    vec3 viewNormal  = normalize(mat3(view) * worldNormal);
+    gNormal = viewNormal;
 
-    // Sample and transform normal if normal map is available
-    vec3 norm = normalize(Normal);
-    vec3 mappedNormal = texture(normalTexture, TexCoord).rgb;
-    if (length(mappedNormal) > 0.01) {
-        mappedNormal = normalize(mappedNormal * 2.0 - 1.0); // map from [0,1] to [-1,1]
-        norm = normalize(mappedNormal);
-    }
+    // Albedo
+    vec3 albedo = texture(diffuseTexture, fs_in.TexCoord).rgb;
 
-    gPosition = FragPos;
-    gNormal = norm;
+    // Specular strength from gloss map (fallback to uniform)
+    float specGloss = texture(specularGlossinessTexture, fs_in.TexCoord).r;
+    float specular = mix(specularStrength, specGloss, step(0.01, specGloss));
+
     gAlbedoSpec.rgb = albedo;
-    gAlbedoSpec.a = specular;
+    gAlbedoSpec.a   = specular;
 }

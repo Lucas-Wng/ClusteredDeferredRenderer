@@ -165,6 +165,7 @@ void DeferredRenderer::lightingPass(const Scene& scene, const Camera& camera) {
 
     lightingShader.use();
     lightingShader.setVec3("viewPos", camera.Position);
+    lightingShader.setMat4("view", camera.GetViewMatrix());
 
     // Bind G-buffer textures
     glActiveTexture(GL_TEXTURE0);
@@ -319,4 +320,28 @@ void DeferredRenderer::assignLightsToClusters(const std::vector<Light>& lights, 
             }
         }
     }
+}
+
+int DeferredRenderer::getWidth() {
+    return screenWidth;
+}
+
+int DeferredRenderer::getHeight() {
+    return screenHeight;
+}
+
+void DeferredRenderer::setScreenSize(int width, int height, const Camera& camera) {
+    if (width == 0 || height == 0) return; // avoid divide by zero
+
+    screenWidth = width;
+    screenHeight = height;
+
+    // Rebuild G-buffer attachments for new resolution
+    initGBuffer();
+
+    // Recompute cluster bounds with new aspect ratio
+    float nearPlane = 0.1f;
+    float farPlane  = 100.0f;
+    float aspect    = static_cast<float>(screenWidth) / static_cast<float>(screenHeight);
+    computeClusterBounds(camera.Zoom, aspect, nearPlane, farPlane);
 }

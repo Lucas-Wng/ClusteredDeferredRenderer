@@ -30,7 +30,7 @@ private:
     Shader* shader = nullptr;
     Scene* scene = nullptr;
     DeferredRenderer* renderer = nullptr;
-    Camera camera{glm::vec3(0.0f, 0.0f, 0.0f)};
+    Camera camera{glm::vec3(0.0f, 0.0f, 5.0f)};
 
 
     float deltaTime = 0.0f;

@@ -26,7 +26,15 @@ GLuint ModelLoader::loadTextureFromFile(const std::string& path) {
     GLuint texID;
     glGenTextures(1, &texID);
     glBindTexture(GL_TEXTURE_2D, texID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    
+    // Use sRGB format for diffuse textures (base color)
+    // Check if this is a diffuse/base color texture by filename
+    bool isDiffuse = path.find("baseColor") != std::string::npos || 
+                     path.find("diffuse") != std::string::npos ||
+                     path.find("albedo") != std::string::npos;
+    
+    GLint internalFormat = isDiffuse ? GL_SRGB8_ALPHA8 : GL_RGBA;
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -97,28 +105,27 @@ void ModelLoader::processNode(cgltf_node* node, const glm::mat4& parentTransform
                 if (uvAccessor) cgltf_accessor_read_float(uvAccessor, i, uv, 2);
                 if (tangentAccessor) cgltf_accessor_read_float(tangentAccessor, i, tangent, 4);
 
-                // Apply node-local transform to the vertex position
-                glm::vec4 worldPos = transform * glm::vec4(pos[0], pos[1], pos[2], 1.0f);
-                glm::vec3 wp = glm::vec3(worldPos);
-                glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(transform)));
-                glm::vec3 worldNormal = normalMatrix * glm::vec3(norm[0], norm[1], norm[2]);
-                glm::vec3 worldTangent = normalMatrix * glm::vec3(tangent[0], tangent[1], tangent[2]);
+                // Store vertices in model space (let Scene handle all transformations)
+                glm::vec3 modelPos = glm::vec3(pos[0], pos[1], pos[2]);
+                glm::vec3 modelNormal = glm::vec3(norm[0], norm[1], norm[2]);
+                glm::vec3 modelTangent = glm::vec3(tangent[0], tangent[1], tangent[2]);
 
-                minBounds = glm::min(minBounds, wp);
-                maxBounds = glm::max(maxBounds, wp);
+                // Update bounds using model space position for correct centering
+                minBounds = glm::min(minBounds, modelPos);
+                maxBounds = glm::max(maxBounds, modelPos);
 
                 size_t offset = i * 12;
-                vertices[offset + 0] = wp.x;
-                vertices[offset + 1] = wp.y;
-                vertices[offset + 2] = wp.z;
-                vertices[offset + 3] = worldNormal.x;
-                vertices[offset + 4] = worldNormal.y;
-                vertices[offset + 5] = worldNormal.z;
+                vertices[offset + 0] = modelPos.x;
+                vertices[offset + 1] = modelPos.y;
+                vertices[offset + 2] = modelPos.z;
+                vertices[offset + 3] = modelNormal.x;
+                vertices[offset + 4] = modelNormal.y;
+                vertices[offset + 5] = modelNormal.z;
                 vertices[offset + 6] = uv[0];
                 vertices[offset + 7] = uv[1];
-                vertices[offset + 8] = worldTangent.x;
-                vertices[offset + 9] = worldTangent.y;
-                vertices[offset +10] = worldTangent.z;
+                vertices[offset + 8] = modelTangent.x;
+                vertices[offset + 9] = modelTangent.y;
+                vertices[offset +10] = modelTangent.z;
                 vertices[offset +11] = tangent[3];  // keep handedness as-is
             }
 
@@ -183,7 +190,7 @@ void ModelLoader::processNode(cgltf_node* node, const glm::mat4& parentTransform
             meshes.push_back(Mesh{
                     vao, vbo, ebo,
                     static_cast<GLsizei>(indices.size()),
-                    localTransform,
+                    transform,
                     diffuseTex, specGlossTex, normalTex, occlusionTex, emissiveTex
             });
         }
@@ -209,6 +216,10 @@ std::vector<Mesh> ModelLoader::loadModel(const std::string& path) {
     std::vector<Mesh> meshes;
     std::string directory = std::filesystem::path(path).parent_path().string();
 
+    // Reset bounds before processing
+    minBounds = glm::vec3(std::numeric_limits<float>::max());
+    maxBounds = glm::vec3(std::numeric_limits<float>::lowest());
+
     if (data->scene) {
         for (cgltf_size i = 0; i < data->scene->nodes_count; ++i) {
             processNode(data->scene->nodes[i], glm::mat4(1.0f), directory, meshes, data);
@@ -218,5 +229,22 @@ std::vector<Mesh> ModelLoader::loadModel(const std::string& path) {
     }
 
     cgltf_free(data);
+
+    // === Normalize the model ===
+    if (!meshes.empty()) {
+        glm::vec3 size   = maxBounds - minBounds;
+        float maxExtent  = glm::max(glm::max(size.x, size.y), size.z);
+        glm::vec3 center = (maxBounds + minBounds) * 0.5f;
+
+        float scale = 1.0f / maxExtent; // fits into unit cube
+        glm::mat4 normalize =
+                glm::scale(glm::mat4(1.0f), glm::vec3(scale)) *
+                glm::translate(glm::mat4(1.0f), -center);
+
+        for (auto& mesh : meshes) {
+            mesh.modelMatrix = normalize * mesh.modelMatrix;
+        }
+    }
+
     return meshes;
 }

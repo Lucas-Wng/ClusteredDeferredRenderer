@@ -11,41 +11,47 @@
 void Scene::loadModel(const std::string& path) {
     ModelLoader loader;
     meshes = loader.loadModel(path);
+    minBounds = loader.minBounds;
+    maxBounds = loader.maxBounds;
     glm::vec3 center = 0.5f * (loader.minBounds + loader.maxBounds);
     glm::vec3 bounds = loader.maxBounds - loader.minBounds;
     float maxExtent = std::max({ bounds.x, bounds.y, bounds.z });
-    float scale = 10.0f / maxExtent;
-
-    normalization = glm::scale(glm::mat4(1.0f), glm::vec3(scale));
-    glm::mat4 axisCorrection = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    normalization = axisCorrection * normalization;
-    normalization = glm::translate(normalization, -center);
+    
+    // Debug output to see model bounds
+    std::cout << "Model bounds: min(" << loader.minBounds.x << ", " << loader.minBounds.y << ", " << loader.minBounds.z << ") "
+              << "max(" << loader.maxBounds.x << ", " << loader.maxBounds.y << ", " << loader.maxBounds.z << ")" << std::endl;
+    std::cout << "Max extent: " << maxExtent << std::endl;
+    std::cout << "Center: (" << center.x << ", " << center.y << ", " << center.z << ")" << std::endl;
+    
+    // No scaling - just center the model
+    float scale = 1.0f / maxExtent;
+    normalization = glm::scale(glm::mat4(1.0f), glm::vec3(scale)) *
+                    glm::translate(glm::mat4(1.0f), -center);
 
     // evenly distributed test lights around the model
     glm::vec3 basePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    int numLights = 10;
-    float radius = 20.0f;
-    bool rainbow = false;
+    int numLights = 8;
+    float radius = 30.0f; // Radius to match unscaled model size
+    bool rainbow = true;
 
     for (int i = 0; i < numLights; ++i) {
 
         float angle = float(i) / float(numLights) * 2.0f * glm::pi<float>();
 
-        // Position in a circle
-        glm::vec3 pos = basePos + glm::vec3(cos(angle), 0.0f, sin(angle)) * radius;
+        // Position in a circle, slightly elevated
+        glm::vec3 pos = basePos + glm::vec3(cos(angle), 1.0f, sin(angle)) * radius;
         glm::vec3 color;
         if (rainbow) {
             // Rainbow color via HSV → RGB
             float hue = float(i) / float(numLights);  // Range [0,1]
-            color = glm::rgbColor(glm::vec3(hue * 360.0f, 1.0f, 1.0f));  // glm::rgbColor takes HSV in degrees
+            color = glm::rgbColor(glm::vec3(hue * 360.0f, 0.8f, 1.0f));  // glm::rgbColor takes HSV in degrees
         }
         else {
             color = glm::vec3(1.0f);
         }
 
-        // Add the light
-        addLight(pos, 50.0f, color, 1.0f);
+        addLight(pos, 50.0f, color, 3.0f);
     }
 }
 
@@ -53,6 +59,7 @@ void Scene::drawGeometryPass(const Shader& shader) const {
     shader.use();
 
     for (const Mesh& mesh : meshes) {
+        // Apply both the mesh's local transform and normalization
         glm::mat4 model = normalization * mesh.modelMatrix;
         shader.setMat4("model", model);
 
