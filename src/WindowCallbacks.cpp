@@ -13,6 +13,7 @@ void WindowCallbacks::framebufferSizeCallback(GLFWwindow* window, int width, int
 
 void WindowCallbacks::mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    if (!app->isCursorCaptured()) return;
     app->cameraController->processMouse(xpos, ypos);
 }
 

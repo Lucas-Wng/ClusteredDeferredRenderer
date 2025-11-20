@@ -8,6 +8,7 @@
 #include <iostream>
 #include <filesystem>
 #include <unordered_map>
+#include <limits>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -110,9 +111,10 @@ void ModelLoader::processNode(cgltf_node* node, const glm::mat4& parentTransform
                 glm::vec3 modelNormal = glm::vec3(norm[0], norm[1], norm[2]);
                 glm::vec3 modelTangent = glm::vec3(tangent[0], tangent[1], tangent[2]);
 
-                // Update bounds using model space position for correct centering
-                minBounds = glm::min(minBounds, modelPos);
-                maxBounds = glm::max(maxBounds, modelPos);
+                // Update bounds in world space so normalization accounts for node transforms
+                glm::vec3 worldPos = glm::vec3(transform * glm::vec4(modelPos, 1.0f));
+                minBounds = glm::min(minBounds, worldPos);
+                maxBounds = glm::max(maxBounds, worldPos);
 
                 size_t offset = i * 12;
                 vertices[offset + 0] = modelPos.x;
@@ -229,22 +231,6 @@ std::vector<Mesh> ModelLoader::loadModel(const std::string& path) {
     }
 
     cgltf_free(data);
-
-    // === Normalize the model ===
-    if (!meshes.empty()) {
-        glm::vec3 size   = maxBounds - minBounds;
-        float maxExtent  = glm::max(glm::max(size.x, size.y), size.z);
-        glm::vec3 center = (maxBounds + minBounds) * 0.5f;
-
-        float scale = 1.0f / maxExtent; // fits into unit cube
-        glm::mat4 normalize =
-                glm::scale(glm::mat4(1.0f), glm::vec3(scale)) *
-                glm::translate(glm::mat4(1.0f), -center);
-
-        for (auto& mesh : meshes) {
-            mesh.modelMatrix = normalize * mesh.modelMatrix;
-        }
-    }
 
     return meshes;
 }

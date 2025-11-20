@@ -16,6 +16,7 @@ public:
     void processKeyboard(GLFWwindow* window, float deltaTime);
     void processMouse(double xpos, double ypos);
     void processScroll(double yoffset);
+    void resetMouse();
 private:
     Camera& camera;
     float lastX = 400.0f;

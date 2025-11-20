@@ -41,3 +41,7 @@ void CameraController::processMouse(double xpos, double ypos) {
 void CameraController::processScroll(double yoffset) {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
+
+void CameraController::resetMouse() {
+    firstMouse = true;
+}

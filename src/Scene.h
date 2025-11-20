@@ -26,6 +26,8 @@ public:
     const std::vector<Light>& getLights() const;
     void addLight(const glm::vec3& position, float radius, const glm::vec3& color = glm::vec3(1.0f), float intensity = 1.0f);
     void updateLights(float time);
+    void setAnimate(bool on);
+    bool getAnimate();
 
     glm::vec3 minBounds;
     glm::vec3 maxBounds;
@@ -34,6 +36,7 @@ private:
     std::vector<Mesh> meshes;
     glm::mat4 normalization;
     std::vector<Light> lights;
+    bool animate = true;
 };
 
 

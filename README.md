@@ -2,7 +2,7 @@
 
 A modern C++ OpenGL clustered deferred renderer. This project renders scenes with many dynamic lights by assigning lights to 3D clusters entirely in the fragment shader.
 
-## ✨ Features
+## Features
 
 - Clustered light culling in fragment shader (no compute shaders)
 - Deferred rendering with:
@@ -13,13 +13,13 @@ A modern C++ OpenGL clustered deferred renderer. This project renders scenes wit
 - Basic Blinn-Phong lighting
 - Optional normal/specular/emissive/occlusion texture support
 
-## 📸 Screenshots
+## Screenshots
 
 ![car](assets/images/car.gif)
 
 ![backpack](assets/images/backpack.gif)
 
-## 🧠 How It Works
+## How It Works
 
 - **G-buffer** stores position, normal, and albedo/specular info per fragment.
 - **Cluster division**: 3D frustum is split into X × Y × Z clusters.
@@ -27,7 +27,7 @@ A modern C++ OpenGL clustered deferred renderer. This project renders scenes wit
 - **Lighting**: Each fragment fetches relevant lights for its cluster and computes lighting (Blinn-Phong).
 
 
-## 🎮 Controls
+## Controls
 
 | Input         | Action         |
 |---------------|----------------|
@@ -38,7 +38,7 @@ A modern C++ OpenGL clustered deferred renderer. This project renders scenes wit
 | Scroll        | Zoom in/out    |
 | ESC           | Quit program   |
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ClusteredDeferredRenderer/
@@ -71,7 +71,7 @@ ClusteredDeferredRenderer/
 └── CMakeLists.txt
 ```
 
-## 🛠️ Build Instructions
+## Build Instructions
 
 ### Dependencies
 

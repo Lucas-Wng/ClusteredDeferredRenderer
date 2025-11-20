@@ -9,6 +9,7 @@
 
 
 void Scene::loadModel(const std::string& path) {
+    meshes.clear();
     ModelLoader loader;
     meshes = loader.loadModel(path);
     minBounds = loader.minBounds;
@@ -16,42 +17,34 @@ void Scene::loadModel(const std::string& path) {
     glm::vec3 center = 0.5f * (loader.minBounds + loader.maxBounds);
     glm::vec3 bounds = loader.maxBounds - loader.minBounds;
     float maxExtent = std::max({ bounds.x, bounds.y, bounds.z });
-    
-    // Debug output to see model bounds
-    std::cout << "Model bounds: min(" << loader.minBounds.x << ", " << loader.minBounds.y << ", " << loader.minBounds.z << ") "
-              << "max(" << loader.maxBounds.x << ", " << loader.maxBounds.y << ", " << loader.maxBounds.z << ")" << std::endl;
-    std::cout << "Max extent: " << maxExtent << std::endl;
-    std::cout << "Center: (" << center.x << ", " << center.y << ", " << center.z << ")" << std::endl;
-    
-    // No scaling - just center the model
+
     float scale = 1.0f / maxExtent;
     normalization = glm::scale(glm::mat4(1.0f), glm::vec3(scale)) *
                     glm::translate(glm::mat4(1.0f), -center);
 
-    // evenly distributed test lights around the model
     glm::vec3 basePos = glm::vec3(0.0f, 0.0f, 0.0f);
 
     int numLights = 8;
-    float radius = 30.0f; // Radius to match unscaled model size
+    float radius = 30.0f;
     bool rainbow = true;
 
-    for (int i = 0; i < numLights; ++i) {
+    if (lights.empty()) {
+        for (int i = 0; i < numLights; ++i) {
 
-        float angle = float(i) / float(numLights) * 2.0f * glm::pi<float>();
+            float angle = float(i) / float(numLights) * 2.0f * glm::pi<float>();
 
-        // Position in a circle, slightly elevated
-        glm::vec3 pos = basePos + glm::vec3(cos(angle), 1.0f, sin(angle)) * radius;
-        glm::vec3 color;
-        if (rainbow) {
-            // Rainbow color via HSV → RGB
-            float hue = float(i) / float(numLights);  // Range [0,1]
-            color = glm::rgbColor(glm::vec3(hue * 360.0f, 0.8f, 1.0f));  // glm::rgbColor takes HSV in degrees
+            glm::vec3 pos = basePos + glm::vec3(cos(angle), 1.0f, sin(angle)) * radius;
+            glm::vec3 color;
+            if (rainbow) {
+                float hue = float(i) / float(numLights);
+                color = glm::rgbColor(glm::vec3(hue * 360.0f, 0.8f, 1.0f));
+            }
+            else {
+                color = glm::vec3(1.0f);
+            }
+
+            addLight(pos, 50.0f, color, 3.0f);
         }
-        else {
-            color = glm::vec3(1.0f);
-        }
-
-        addLight(pos, 50.0f, color, 3.0f);
     }
 }
 
@@ -88,12 +81,21 @@ void Scene::addLight(const glm::vec3& position, float radius, const glm::vec3& c
 }
 
 void Scene::updateLights(float time) {
-    for (size_t i = 0; i < lights.size(); ++i) {
-        float angle = time + i;  // offset each light
-        float radius = 10.0f;
-        lights[i].position.x = radius * std::cos(angle);
-        lights[i].position.z = radius * std::sin(angle);
-        // Optionally animate y too
-        lights[i].position.y = 2.0f + std::sin(time * 0.5f + i);
+    if (animate) {
+        for (size_t i = 0; i < lights.size(); ++i) {
+            float angle = time + i;
+            float radius = 10.0f;
+            lights[i].position.x = radius * std::cos(angle);
+            lights[i].position.z = radius * std::sin(angle);
+            lights[i].position.y = 2.0f + std::sin(time * 0.5f + i);
+        }
     }
+}
+
+void Scene::setAnimate(bool on) {
+    animate = on;
+}
+
+bool Scene::getAnimate() {
+    return animate;
 }
