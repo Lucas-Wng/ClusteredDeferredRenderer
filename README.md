@@ -48,6 +48,7 @@ A modern C++ OpenGL clustered deferred renderer. This project uses deferred rend
 - GLFW
 - GLAD
 - GLM
+- ImGui
 
 ### Build (macOS/Linux/Windows)
 
