@@ -1,6 +1,6 @@
 # Clustered Deferred Renderer
 
-A modern C++ OpenGL clustered deferred renderer. This project renders scenes with many dynamic lights by assigning lights to 3D clusters entirely in the fragment shader.
+A modern C++ OpenGL clustered deferred renderer. This project uses deferred rendering to render scenes with many dynamic lights by assigning lights to 3D clusters.
 
 ## Features
 
@@ -12,6 +12,7 @@ A modern C++ OpenGL clustered deferred renderer. This project renders scenes wit
 - Custom camera and input controller
 - Basic Blinn-Phong lighting
 - Optional normal/specular/emissive/occlusion texture support
+- ImGui interface for model loading and editing lights
 
 ## Screenshots
 
@@ -29,47 +30,14 @@ A modern C++ OpenGL clustered deferred renderer. This project renders scenes wit
 
 ## Controls
 
-| Input         | Action         |
-|---------------|----------------|
-| W / A / S / D | Move camera    |
-| Space         | Move up        |
-| Shift         | Move down      |
-| Mouse Move    | Look around    |
-| Scroll        | Zoom in/out    |
-| ESC           | Quit program   |
-
-## Project Structure
-
-```
-ClusteredDeferredRenderer/
-├── assets/
-│   ├── images/             # images
-│   └── models/             # glTF models
-├── include/
-│   ├── glad/
-│   ├── glm/
-│   ├── KHR/
-│   ├── cgltf.h             # glTF loader
-│   └── stb_image.h         # Image loader
-├── shaders/                # GLSL shader programs
-│   ├── geometry.vert
-│   ├── geometry.frag
-│   ├── lighting.vert
-│   └── lighting.frag
-├── src/
-│   ├── Application.{cpp,h}
-│   ├── CameraController.{cpp,h}
-│   ├── camera.h
-│   ├── DeferredRenderer.{cpp,h}
-│   ├── ModelLoader.{cpp,h}
-│   ├── Scene.{cpp,h}
-│   ├── shader.h
-│   ├── WindowCallbacks.{cpp,h}
-│   ├── glad.c
-│   └── main.cpp
-├── .gitignore
-└── CMakeLists.txt
-```
+| Input         | Action          |
+|---------------|-----------------|
+| W / A / S / D | Move camera     |
+| Space         | Move up         |
+| Shift         | Move down       |
+| Mouse Move    | Look around     |
+| Scroll        | Zoom in/out     |
+| ESC           | Recapture Mouse |
 
 ## Build Instructions
 
@@ -92,4 +60,3 @@ make
 ./ClusteredDeferredRenderer
 ```
 
-Make sure you have `stb_image.h` and `cgltf.h` in your `include/` directory as shown.
