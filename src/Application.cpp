@@ -53,9 +53,12 @@ void Application::run() {
 
         renderer->geometryPass(*scene, camera);
         renderer->lightingPass(*scene, camera);
+        
+        gpuFrameTime = renderer->getGPUFrameTime();
 
         ImGui::Begin("Debug Panel");
         ImGui::Text("FPS: %.1f", 1.0f / deltaTime);
+        ImGui::Text("GPU Frame Time: %.2f ms", gpuFrameTime);
         ImGui::Separator();
         ImGui::InputText("Model Path", modelPathBuffer, IM_ARRAYSIZE(modelPathBuffer));
         if (ImGui::Button("Load glTF")) {

@@ -51,6 +51,7 @@ private:
     float newLightRadius = 10.0f;
     glm::vec3 newLightColor = glm::vec3(1.0f, 0.9f, 0.7f);
     float newLightIntensity = 3.0f;
+    float gpuFrameTime = 0.0f;
 };
 
 #endif //CLUSTEREDDEFERREDRENDERER_APPLICATION_H

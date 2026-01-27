@@ -32,6 +32,9 @@ DeferredRenderer::DeferredRenderer(int width, int height, const Camera& camera)
     float aspect = (float)screenWidth / screenHeight;
     computeClusterBounds(camera.Zoom, aspect, nearPlane, farPlane);
 
+    // Initialize GPU timing queries
+    glGenQueries(2, timeQueries);
+    
     initGBuffer();
 }
 
@@ -42,6 +45,7 @@ DeferredRenderer::~DeferredRenderer() {
     glDeleteTextures(1, &gAlbedoSpec);
     glDeleteTextures(1, &clusterLightTexture);
     glDeleteRenderbuffers(1, &rboDepth);
+    glDeleteQueries(2, timeQueries);
 
     if (quadVAO != 0) {
         glDeleteVertexArrays(1, &quadVAO);
@@ -109,6 +113,9 @@ void DeferredRenderer::initGBuffer() {
 }
 
 void DeferredRenderer::geometryPass(const Scene& scene, const Camera& camera) {
+    // Start GPU timing
+    glBeginQuery(GL_TIME_ELAPSED, timeQueries[currentQueryFrame]);
+    
     glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
     glViewport(0, 0, screenWidth, screenHeight);
 
@@ -194,6 +201,22 @@ void DeferredRenderer::lightingPass(const Scene& scene, const Camera& camera) {
     lightingShader.setInt("clusterLightTex", 3);
 
     renderQuad();
+
+    // End GPU timing and retrieve previous frame's result
+    glEndQuery(GL_TIME_ELAPSED);
+    
+    // Get the result from the previous frame's query
+    int prevQueryFrame = 1 - currentQueryFrame;
+    GLint available = 0;
+    glGetQueryObjectiv(timeQueries[prevQueryFrame], GL_QUERY_RESULT_AVAILABLE, &available);
+    if (available) {
+        GLuint64 elapsedTime = 0;
+        glGetQueryObjectui64v(timeQueries[prevQueryFrame], GL_QUERY_RESULT, &elapsedTime);
+        gpuFrameTime = elapsedTime / 1000000.0f; // Convert nanoseconds to milliseconds
+    }
+    
+    // Alternate between two queries
+    currentQueryFrame = prevQueryFrame;
 
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);

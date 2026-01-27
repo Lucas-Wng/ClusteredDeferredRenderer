@@ -25,6 +25,7 @@ public:
 
     int getWidth();
     int getHeight();
+    float getGPUFrameTime() const { return gpuFrameTime; }
 
     void setScreenSize(int width, int height, const Camera& camera);
 
@@ -41,6 +42,11 @@ private:
 
     int screenWidth, screenHeight;
     GLuint quadVAO = 0, quadVBO = 0;
+    
+    // GPU timing
+    GLuint timeQueries[2] = {0, 0};
+    int currentQueryFrame = 0;
+    float gpuFrameTime = 0.0f;
 
     static const int CLUSTER_X = 16;
     static const int CLUSTER_Y = 9;
