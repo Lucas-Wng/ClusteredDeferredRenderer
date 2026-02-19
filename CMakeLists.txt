@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.31)
 project(ClusteredDeferredRenderer)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
@@ -39,3 +41,27 @@ add_executable(ClusteredDeferredRenderer src/main.cpp
 
 target_include_directories(ClusteredDeferredRenderer PUBLIC include)
 target_link_libraries(ClusteredDeferredRenderer glad imgui glfw OpenGL::GL)
+
+enable_testing()
+
+find_package(GTest CONFIG QUIET)
+if (NOT GTest_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+            googletest
+            URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+endif ()
+
+add_executable(CameraUnitTests
+        tests/camera_tests.cpp
+        tests/cluster_math_tests.cpp
+        tests/scene_math_tests.cpp
+)
+target_include_directories(CameraUnitTests PRIVATE include src)
+target_link_libraries(CameraUnitTests PRIVATE GTest::gtest_main)
+
+include(GoogleTest)
+gtest_discover_tests(CameraUnitTests)

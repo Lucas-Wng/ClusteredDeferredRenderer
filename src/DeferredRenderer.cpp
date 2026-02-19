@@ -3,21 +3,9 @@
 //
 
 #include "DeferredRenderer.h"
+#include "ClusterMath.h"
 #include <iostream>
 #include <glm/gtc/type_ptr.hpp>
-
-bool sphereIntersectsAABB(const glm::vec3& center, float radius, const glm::vec3& aabbMin, const glm::vec3& aabbMax) {
-    float distSquared = 0.0f;
-    for (int i = 0; i < 3; ++i) {
-        if (center[i] < aabbMin[i]) {
-            distSquared += (aabbMin[i] - center[i]) * (aabbMin[i] - center[i]);
-        } else if (center[i] > aabbMax[i]) {
-            distSquared += (center[i] - aabbMax[i]) * (center[i] - aabbMax[i]);
-        }
-    }
-
-    return distSquared <= radius * radius;
-}
 
 DeferredRenderer::DeferredRenderer(int width, int height, const Camera& camera)
         : screenWidth(width), screenHeight(height), quadVAO(0), quadVBO(0),
@@ -255,67 +243,25 @@ void DeferredRenderer::renderQuad() {
 }
 
 void DeferredRenderer::computeClusterBounds(float fov, float aspect, float nearPlane, float farPlane) {
-    clusterAABBs.clear();
-    clusterAABBs.resize(CLUSTER_X * CLUSTER_Y * CLUSTER_Z);
-
-    float tanHalfFovY = tan(glm::radians(fov / 2.0f));
-    float tanHalfFovX = tanHalfFovY * aspect;
-
-    for (int z = 0; z < CLUSTER_Z; ++z) {
-        float zNear = nearPlane * std::pow(farPlane / nearPlane, float(z) / CLUSTER_Z);
-        float zFar  = nearPlane * std::pow(farPlane / nearPlane, float(z + 1) / CLUSTER_Z);
-
-        for (int y = 0; y < CLUSTER_Y; ++y) {
-            float yNearMin = -tanHalfFovY * zNear + 2.0f * tanHalfFovY * zNear * float(y) / CLUSTER_Y;
-            float yNearMax = -tanHalfFovY * zNear + 2.0f * tanHalfFovY * zNear * float(y + 1) / CLUSTER_Y;
-
-            float yFarMin = -tanHalfFovY * zFar + 2.0f * tanHalfFovY * zFar * float(y) / CLUSTER_Y;
-            float yFarMax = -tanHalfFovY * zFar + 2.0f * tanHalfFovY * zFar * float(y + 1) / CLUSTER_Y;
-
-            for (int x = 0; x < CLUSTER_X; ++x) {
-                float xNearMin = -tanHalfFovX * zNear + 2.0f * tanHalfFovX * zNear * float(x) / CLUSTER_X;
-                float xNearMax = -tanHalfFovX * zNear + 2.0f * tanHalfFovX * zNear * float(x + 1) / CLUSTER_X;
-
-                float xFarMin = -tanHalfFovX * zFar + 2.0f * tanHalfFovX * zFar * float(x) / CLUSTER_X;
-                float xFarMax = -tanHalfFovX * zFar + 2.0f * tanHalfFovX * zFar * float(x + 1) / CLUSTER_X;
-
-                int clusterIdx = x + CLUSTER_X * (y + CLUSTER_Y * z);
-
-                clusterAABBs[clusterIdx].min = glm::vec3(
-                        std::min({xNearMin, xNearMax, xFarMin, xFarMax}),
-                        std::min({yNearMin, yNearMax, yFarMin, yFarMax}),
-                        -zFar  // Negative because view space Z points toward viewer
-                );
-                clusterAABBs[clusterIdx].max = glm::vec3(
-                        std::max({xNearMin, xNearMax, xFarMin, xFarMax}),
-                        std::max({yNearMin, yNearMax, yFarMin, yFarMax}),
-                        -zNear
-                );
-            }
-        }
-    }
+    clusterAABBs = computeClusterAABBs(CLUSTER_X, CLUSTER_Y, CLUSTER_Z, fov, aspect, nearPlane, farPlane);
 }
 
 void DeferredRenderer::assignLightsToClusters(const std::vector<Light>& lights, const glm::mat4& viewMatrix) {
-    std::fill(clusterLightCounts.begin(), clusterLightCounts.end(), 0);
-    std::fill(clusterLightIndices.begin(), clusterLightIndices.end(), -1);
-
-    for (int lightIdx = 0; lightIdx < lights.size() && lightIdx < 256; ++lightIdx) {
-        const Light& light = lights[lightIdx];
-        glm::vec3 lightViewPos = glm::vec3(viewMatrix * glm::vec4(light.position, 1.0f));
-
-        for (int clusterIdx = 0; clusterIdx < clusterAABBs.size(); ++clusterIdx) {
-            const ClusterAABB& aabb = clusterAABBs[clusterIdx];
-
-            if (sphereIntersectsAABB(lightViewPos, light.radius, aabb.min, aabb.max)) {
-                int count = clusterLightCounts[clusterIdx];
-                if (count < MAX_LIGHTS_PER_CLUSTER) {
-                    clusterLightIndices[clusterIdx * MAX_LIGHTS_PER_CLUSTER + count] = lightIdx;
-                    clusterLightCounts[clusterIdx]++;
-                }
-            }
-        }
+    std::vector<ClusterSphereLight> sphereLights;
+    sphereLights.reserve(lights.size());
+    for (const Light& light : lights) {
+        sphereLights.push_back({light.position, light.radius});
     }
+
+    ClusterLightAssignment assignment = assignSphereLightsToClusters(
+            sphereLights,
+            viewMatrix,
+            clusterAABBs,
+            MAX_LIGHTS_PER_CLUSTER,
+            256);
+
+    clusterLightCounts = std::move(assignment.counts);
+    clusterLightIndices = std::move(assignment.indices);
 }
 
 int DeferredRenderer::getWidth() {

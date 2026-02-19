@@ -4,6 +4,7 @@
 
 #include <glad/glad.h>
 #include "Scene.h"
+#include "SceneMath.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/color_space.hpp>
 
@@ -14,13 +15,7 @@ void Scene::loadModel(const std::string& path) {
     meshes = loader.loadModel(path);
     minBounds = loader.minBounds;
     maxBounds = loader.maxBounds;
-    glm::vec3 center = 0.5f * (loader.minBounds + loader.maxBounds);
-    glm::vec3 bounds = loader.maxBounds - loader.minBounds;
-    float maxExtent = std::max({ bounds.x, bounds.y, bounds.z });
-
-    float scale = 1.0f / maxExtent;
-    normalization = glm::scale(glm::mat4(1.0f), glm::vec3(scale)) *
-                    glm::translate(glm::mat4(1.0f), -center);
+    normalization = computeSceneNormalizationMatrix(loader.minBounds, loader.maxBounds);
 
     glm::vec3 basePos = glm::vec3(0.0f, 0.0f, 0.0f);
 

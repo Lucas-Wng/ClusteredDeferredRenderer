@@ -9,11 +9,7 @@
 #include "shader.h"
 #include "Scene.h"
 #include "camera.h"
-
-struct ClusterAABB {
-    glm::vec3 min;
-    glm::vec3 max;
-};
+#include "ClusterMath.h"
 
 class DeferredRenderer {
 public:
