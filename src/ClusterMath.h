@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <future>
+#include <thread>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -95,22 +97,41 @@ inline ClusterLightAssignment assignSphereLightsToClusters(
     assignment.indices.assign(clusterCount * maxLightsPerCluster, -1);
 
     const int lightLimit = std::min(static_cast<int>(lights.size()), maxLightsToProcess);
-    for (int lightIdx = 0; lightIdx < lightLimit; ++lightIdx) {
-        const ClusterSphereLight& light = lights[lightIdx];
-        const glm::vec3 lightViewPos = glm::vec3(viewMatrix * glm::vec4(light.position, 1.0f));
 
-        for (int clusterIdx = 0; clusterIdx < clusterCount; ++clusterIdx) {
-            const ClusterAABB& aabb = clusterAABBs[clusterIdx];
-            if (sphereIntersectsAABB(lightViewPos, light.radius, aabb.min, aabb.max)) {
-                const int count = assignment.counts[clusterIdx];
-                if (count < maxLightsPerCluster) {
-                    assignment.indices[clusterIdx * maxLightsPerCluster + count] = lightIdx;
-                    assignment.counts[clusterIdx] = count + 1;
+    // Pre-transform all lights to view space once instead of once per cluster.
+    std::vector<glm::vec3> lightViewPositions(lightLimit);
+    for (int i = 0; i < lightLimit; ++i)
+        lightViewPositions[i] = glm::vec3(viewMatrix * glm::vec4(lights[i].position, 1.0f));
+
+    // Outer loop over clusters: each cluster owns a disjoint slice of indices,
+    // so threads write to non-overlapping memory with no synchronisation needed.
+    const int nThreads = static_cast<int>(std::max(1u, std::thread::hardware_concurrency()));
+    const int chunkSize = (clusterCount + nThreads - 1) / nThreads;
+
+    std::vector<std::future<void>> futures;
+    futures.reserve(nThreads);
+
+    for (int t = 0; t < nThreads; ++t) {
+        const int begin = t * chunkSize;
+        const int end   = std::min(begin + chunkSize, clusterCount);
+        if (begin >= end) break;
+
+        futures.push_back(std::async(std::launch::async, [&, begin, end]() {
+            for (int clusterIdx = begin; clusterIdx < end; ++clusterIdx) {
+                const ClusterAABB& aabb = clusterAABBs[clusterIdx];
+                int count = 0;
+                for (int lightIdx = 0; lightIdx < lightLimit && count < maxLightsPerCluster; ++lightIdx) {
+                    if (sphereIntersectsAABB(lightViewPositions[lightIdx], lights[lightIdx].radius, aabb.min, aabb.max)) {
+                        assignment.indices[clusterIdx * maxLightsPerCluster + count] = lightIdx;
+                        ++count;
+                    }
                 }
+                assignment.counts[clusterIdx] = count;
             }
-        }
+        }));
     }
 
+    for (auto& f : futures) f.get();
     return assignment;
 }
 

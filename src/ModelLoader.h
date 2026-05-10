@@ -6,6 +6,7 @@
 
 #include <glad/glad.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
 
@@ -25,6 +26,7 @@ struct Mesh {
     GLuint normalTextureID = 0;
     GLuint occlusionTextureID = 0;
     GLuint emissiveTextureID = 0;
+    bool hasTangents = false;
 };
 
 class ModelLoader {
@@ -38,10 +40,10 @@ private:
     void processNode(cgltf_node* node, const glm::mat4& parentTransform, const std::string& directory,
                      std::vector<Mesh>& meshes, const cgltf_data* data);
 
-    GLuint loadTextureFromFile(const std::string& path);
+    GLuint loadTextureFromFile(const std::string& path, bool isSRGB);
     glm::mat4 getNodeTransform(cgltf_node* node);
 
-
+    std::unordered_map<std::string, GLuint> textureCache;
 };
 
 #endif // DEFERREDRENDERER_MODELLOADER_H

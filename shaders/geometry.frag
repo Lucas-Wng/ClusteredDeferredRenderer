@@ -19,6 +19,8 @@ uniform sampler2D occlusionTexture; // unused in G-buffer (optional)
 uniform sampler2D emissiveTexture;  // unused in G-buffer (optional)
 
 uniform float specularStrength = 0.5;
+uniform bool hasNormalMap;
+uniform bool hasTangents;
 
 void main()
 {
@@ -26,11 +28,15 @@ void main()
     vec3 viewPos = vec3(view * vec4(fs_in.FragPos, 1.0));
     gPosition = viewPos;
 
-    // Normal mapping (tangent → view space)
-    vec3 texNormal = texture(normalTexture, fs_in.TexCoord).rgb;
-    texNormal = normalize(texNormal * 2.0 - 1.0);   // [0,1] → [-1,1]
-    vec3 worldNormal = normalize(fs_in.TBN * texNormal);
-    vec3 viewNormal  = normalize(mat3(view) * worldNormal);
+    vec3 viewNormal;
+    if (hasNormalMap && hasTangents) {
+        vec3 texNormal = normalize(texture(normalTexture, fs_in.TexCoord).rgb * 2.0 - 1.0);
+        vec3 worldNormal = normalize(fs_in.TBN * texNormal);
+        viewNormal = normalize(mat3(view) * worldNormal);
+    } else {
+        // TBN[2] is always the geometric world-space normal (set unconditionally in vertex shader)
+        viewNormal = normalize(mat3(view) * fs_in.TBN[2]);
+    }
     gNormal = viewNormal;
 
     // Albedo

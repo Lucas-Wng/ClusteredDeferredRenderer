@@ -16,7 +16,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 
-GLuint ModelLoader::loadTextureFromFile(const std::string& path) {
+GLuint ModelLoader::loadTextureFromFile(const std::string& path, bool isSRGB) {
     int width, height, channels;
     unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
     if (!data) {
@@ -27,14 +27,8 @@ GLuint ModelLoader::loadTextureFromFile(const std::string& path) {
     GLuint texID;
     glGenTextures(1, &texID);
     glBindTexture(GL_TEXTURE_2D, texID);
-    
-    // Use sRGB format for diffuse textures (base color)
-    // Check if this is a diffuse/base color texture by filename
-    bool isDiffuse = path.find("baseColor") != std::string::npos || 
-                     path.find("diffuse") != std::string::npos ||
-                     path.find("albedo") != std::string::npos;
-    
-    GLint internalFormat = isDiffuse ? GL_SRGB8_ALPHA8 : GL_RGBA;
+
+    GLint internalFormat = isSRGB ? GL_SRGB8_ALPHA8 : GL_RGBA;
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -69,8 +63,6 @@ glm::mat4 ModelLoader::getNodeTransform(cgltf_node* node) {
 
 void ModelLoader::processNode(cgltf_node* node, const glm::mat4& parentTransform, const std::string& directory,
                               std::vector<Mesh>& meshes, const cgltf_data* data) {
-    static std::unordered_map<std::string, GLuint> textureCache;  // Caches texture loads
-
     glm::mat4 localTransform = getNodeTransform(node);
     glm::mat4 transform = parentTransform * localTransform;
 
@@ -165,11 +157,11 @@ void ModelLoader::processNode(cgltf_node* node, const glm::mat4& parentTransform
 
             GLuint diffuseTex = 0, specGlossTex = 0, normalTex = 0, occlusionTex = 0, emissiveTex = 0;
 
-            auto loadTex = [&](cgltf_texture_view view) -> GLuint {
+            auto loadTex = [&](cgltf_texture_view view, bool isSRGB) -> GLuint {
                 if (view.texture && view.texture->image && view.texture->image->uri) {
                     std::string texPath = directory + "/" + view.texture->image->uri;
                     if (textureCache.count(texPath)) return textureCache[texPath];
-                    GLuint id = loadTextureFromFile(texPath);
+                    GLuint id = loadTextureFromFile(texPath, isSRGB);
                     textureCache[texPath] = id;
                     return id;
                 }
@@ -179,21 +171,22 @@ void ModelLoader::processNode(cgltf_node* node, const glm::mat4& parentTransform
             if (prim->material) {
                 cgltf_material* mat = prim->material;
                 if (mat->has_pbr_specular_glossiness) {
-                    diffuseTex = loadTex(mat->pbr_specular_glossiness.diffuse_texture);
-                    specGlossTex = loadTex(mat->pbr_specular_glossiness.specular_glossiness_texture);
+                    diffuseTex    = loadTex(mat->pbr_specular_glossiness.diffuse_texture,              true);
+                    specGlossTex  = loadTex(mat->pbr_specular_glossiness.specular_glossiness_texture,  false);
                 } else if (mat->has_pbr_metallic_roughness) {
-                    diffuseTex = loadTex(mat->pbr_metallic_roughness.base_color_texture);
+                    diffuseTex    = loadTex(mat->pbr_metallic_roughness.base_color_texture,            true);
                 }
-                normalTex = loadTex(mat->normal_texture);
-                occlusionTex = loadTex(mat->occlusion_texture);
-                emissiveTex = loadTex(mat->emissive_texture);
+                normalTex    = loadTex(mat->normal_texture,    false);
+                occlusionTex = loadTex(mat->occlusion_texture, false);
+                emissiveTex  = loadTex(mat->emissive_texture,  false);
             }
 
             meshes.push_back(Mesh{
                     vao, vbo, ebo,
                     static_cast<GLsizei>(indices.size()),
                     transform,
-                    diffuseTex, specGlossTex, normalTex, occlusionTex, emissiveTex
+                    diffuseTex, specGlossTex, normalTex, occlusionTex, emissiveTex,
+                    tangentAccessor != nullptr
             });
         }
     }

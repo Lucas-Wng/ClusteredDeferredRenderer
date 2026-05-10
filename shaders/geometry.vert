@@ -13,6 +13,7 @@ out VS_OUT {
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform bool hasTangents;
 
 void main()
 {
@@ -20,15 +21,19 @@ void main()
     vec4 worldPos = model * vec4(aPos, 1.0);
     vs_out.FragPos = worldPos.xyz;
 
-    // Normal & tangent → world space
     vec3 N = normalize(mat3(transpose(inverse(model))) * aNormal);
-    vec3 T = normalize(mat3(model) * aTangent.xyz);
 
-    // Gram-Schmidt orthogonalization to avoid skewed T
-    T = normalize(T - dot(T, N) * N);
-
-    // Bitangent reconstructed with handedness
-    vec3 B = cross(N, T) * aTangent.w;
+    vec3 T, B;
+    if (hasTangents) {
+        T = normalize(mat3(model) * aTangent.xyz);
+        T = normalize(T - dot(T, N) * N);
+        B = cross(N, T) * aTangent.w;
+    } else {
+        // Build an arbitrary orthonormal frame around N so TBN[2] is always valid
+        vec3 up = abs(N.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        T = normalize(cross(up, N));
+        B = cross(N, T);
+    }
 
     vs_out.TBN = mat3(T, B, N);
 

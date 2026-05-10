@@ -7,9 +7,21 @@
 #include "SceneMath.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/color_space.hpp>
+#include <unordered_set>
 
 
 void Scene::loadModel(const std::string& path) {
+    // Release GPU resources from the previous load
+    std::unordered_set<GLuint> texIDs;
+    for (const Mesh& mesh : meshes) {
+        glDeleteVertexArrays(1, &mesh.vao);
+        glDeleteBuffers(1, &mesh.vbo);
+        glDeleteBuffers(1, &mesh.ebo);
+        for (GLuint id : {mesh.diffuseTextureID, mesh.specularGlossinessTextureID,
+                          mesh.normalTextureID, mesh.occlusionTextureID, mesh.emissiveTextureID})
+            if (id) texIDs.insert(id);
+    }
+    for (GLuint id : texIDs) glDeleteTextures(1, &id);
     meshes.clear();
     ModelLoader loader;
     meshes = loader.loadModel(path);
@@ -47,9 +59,10 @@ void Scene::drawGeometryPass(const Shader& shader) const {
     shader.use();
 
     for (const Mesh& mesh : meshes) {
-        // Apply both the mesh's local transform and normalization
         glm::mat4 model = normalization * mesh.modelMatrix;
         shader.setMat4("model", model);
+        shader.setBool("hasNormalMap", mesh.normalTextureID != 0);
+        shader.setBool("hasTangents",  mesh.hasTangents);
 
         glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, mesh.diffuseTextureID);
         shader.setInt("diffuseTexture", 0);
